@@ -14,6 +14,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'Y', 'Z']
 team_names = ["Σ", "e"]
+file_name = {"Σ":"SIGMA", "e":"EULERS"}
 
 
 # Bot token can be obtained via https://t.me/BotFather
@@ -33,11 +34,18 @@ class TeamSubmissions(StatesGroup):
 
 @dp.message(CommandStart())
 async def start(message: types.Message, state: FSMContext):
+    user_data = await state.get_data()
+    
+    # If the user has already set a team name, ignore the command
+    if "name" in user_data:
+        await message.answer("You have already started. Continue submitting photos.")
+        return
+    
     await state.set_state(TeamSubmissions.name)
-    print(state)
     builder = ReplyKeyboardBuilder()
     for n in team_names:
         builder.add(types.KeyboardButton(text=n))
+    
     await message.answer("Welcome! Submit photos with people you find here")
     await message.answer("What team are you?", reply_markup=builder.as_markup(resize_keyboard=True))
 
@@ -75,11 +83,19 @@ async def echo_handler(message: types.Message, state: FSMContext):
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message, state: FSMContext):
-    print("User sent a photo!") 
-
     data = await state.get_data()
     print(data["name"], data["letter"])
-    await state.clear()
+    
+    photo = message.photo[-1]  # Get the highest resolution photo
+    file_info = await message.bot.get_file(photo.file_id)
+    file_path = file_info.file_path
+    
+    # Download the file
+    destination = f"receivedFromUser/team{file_name[data["name"]]}-letter{data["letter"]}.jpg"
+    await message.bot.download_file(file_path, destination)
+    
+    print(f"Photo saved as {destination}")
+    await message.answer("Your photo was received and will be procceed by us!")
     
 
 
