@@ -6,9 +6,9 @@ from os import getenv
 from aiogram import Bot, Dispatcher, html, types, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart, Command, BaseFilter
+from aiogram.filters import CommandStart, BaseFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder, KeyboardBuilder, InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.utils.formatting import Bold
 from aiogram.fsm.state import State, StatesGroup
 
@@ -91,7 +91,7 @@ async def handle_photo(message: types.Message, state: FSMContext):
     file_path = file_info.file_path
     
     # Download the file
-    destination = f"receivedFromUser/team{file_name[data["name"]]}-letter{data["letter"]}.jpg"
+    destination = f"receivedFromUser/team{file_name[data["name"]]}/{data["letter"]}.jpg"
     await message.bot.download_file(file_path, destination)
     
     print(f"Photo saved as {destination}")
