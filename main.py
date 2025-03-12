@@ -12,13 +12,15 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.utils.formatting import Bold
 from aiogram.fsm.state import State, StatesGroup
 
-letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'Y', 'Z']
+# letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'Y', 'Z']
+letters = ['A', 'B', 'C']
+
 team_names = ["Σ", "e", "∫", "∂/∂x"]
+look_for_type = {"Σ":"person", "e":"person", "∫": "thing", "∂/∂x": "thing"}
 file_name = {"Σ":"SIGMA", "e":"EULERS", "∫": "INTEGRAL", "∂/∂x": "DIFFERENTIATION"}
 
 
 TOKEN = getenv("BOT_TOKEN")
-print(TOKEN)
 
 dp = Dispatcher()
 
@@ -31,7 +33,6 @@ class TeamSubmissions(StatesGroup):
     choosing_challenge = State()
     choosing_letter = State()
     submitting = State()
-    available_letters = letters.copy()
 
 class NotCancelCommandFilter(BaseFilter):
     async def __call__(self, message: types.Message) -> bool:
@@ -59,12 +60,12 @@ async def start(message: types.Message, state: FSMContext):
         return
     
     await state.set_state(TeamSubmissions.choosing_name)
-    await state.update_data(available_letters=TeamSubmissions.available_letters)
+    await state.update_data(available_letters=letters.copy())
     builder = ReplyKeyboardBuilder()
     for n in team_names:
         builder.add(types.KeyboardButton(text=n))
     
-    await message.answer("Welcome! Submit photos with people you find here.\n\n\nATTENTION! \n\n1) Let only one member of the team submit the responses.\n\n2) Use /cancel to return back and submit a photo for a different letter if you misclicked.\n\n3) After the photo is submitted, it can not be changed.")
+    await message.answer("ATTENTION! \n\n1) Let only one member of the team submit the responses.\n\n2) Use /cancel to return back and submit a photo for a different letter if you misclicked.\n\n3) After the photo is submitted, it can not be changed.")
     await message.answer("What team are you?", reply_markup=builder.as_markup(resize_keyboard=True))
     await state.set_state(TeamSubmissions.choosing_name)
 
@@ -121,12 +122,13 @@ async def invalid_name(message: types.Message, state: FSMContext):
     await message.answer("Invalid name. \nUse the markup keyboard or copypaste a valid name: Σ, e, ∫, ∂/∂x.")
 
 
-
-
 @dp.message(TeamSubmissions.choosing_letter, LetterFilter())
 async def echo_handler(message: types.Message, state: FSMContext):
+    letter = message.text
     await state.set_state(TeamSubmissions.submitting)
-    await state.update_data(letter=message.text)
+    await state.update_data(letter=letter)
+    temp_data = (await state.get_data())['name']
+    await message.answer(f"Send photo with a {look_for_type[temp_data]} whose name starts with *{letter}* ", parse_mode="MarkdownV2")
 
 @dp.message(TeamSubmissions.choosing_letter, NotCancelCommandFilter())
 async def invalid_name(message: types.Message, state: FSMContext):
@@ -146,26 +148,27 @@ async def handle_photo(message: types.Message, state: FSMContext):
         # Save keyboard photo
         destination = f"receivedFromUser/team{file_name[data['name']]}/keyboard.jpg"
         await message.bot.download_file(file_path, destination)
-        print(f"Keyboard photo saved as {destination}")
-        
-        # Transition to Alphabet Challenge
-        await state.update_data(challenge="Alphabet Challenge")
-        await state.set_state(TeamSubmissions.choosing_letter)
-        
-        # Setup letter selection keyboard
-        builder = ReplyKeyboardBuilder()
-        for i in data.get('available_letters', []):
-            builder.add(types.KeyboardButton(text=i))
-        builder.adjust(4)
-        
-        await message.answer(
-            "Great! Now let's move on to the Alphabet Challenge. Choose a letter:",
-            reply_markup=builder.as_markup(resize_keyboard=True)
-        )
-        return
+
+        if len(listdir(f"receivedFromUser/team{file_name[data['name']]}")) > 3:
+            await message.answer("Congratulations! You've completed both challenges! 🎉")
+        else:
+            # Transition to Alphabet Challenge
+            await state.update_data(challenge="Alphabet Challenge")
+            await state.set_state(TeamSubmissions.choosing_letter)
+            
+            # Setup letter selection keyboard
+            builder = ReplyKeyboardBuilder()
+            for i in data.get('available_letters', []):
+                builder.add(types.KeyboardButton(text=i))
+            builder.adjust(4)
+            
+            await message.answer(
+                "Great! Now let's move on to the Alphabet Challenge. Choose a letter:",
+                reply_markup=builder.as_markup(resize_keyboard=True)
+            )
+            return
     
     # Alphabet Challenge logic
-    print(data["name"], data["letter"])
     destination = f"receivedFromUser/team{file_name[data['name']]}/{data['letter']}.jpg"
     await message.bot.download_file(file_path, destination)
     
@@ -173,8 +176,6 @@ async def handle_photo(message: types.Message, state: FSMContext):
     if data["letter"] in available_letters:
         available_letters.remove(data["letter"])
     await state.update_data(available_letters=available_letters)
-    
-    print(f"Photo saved as {destination}")
     
     if not available_letters:  # No more letters available
         if "keyboard.jpg" not in listdir(f"receivedFromUser/team{file_name[data['name']]}"):
