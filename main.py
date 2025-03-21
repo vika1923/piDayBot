@@ -12,11 +12,10 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.utils.formatting import Bold
 from aiogram.fsm.state import State, StatesGroup
 
-# letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'Y', 'Z']
-letters = ['A', 'B', 'C']
+letters = ['A', 'B', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'Q', 'R', 'S', 'U', 'V', 'X', 'Y']
 
 team_names = ["Σ", "e", "∫", "∂/∂x"]
-look_for_type = {"Σ":"person", "e":"person", "∫": "thing", "∂/∂x": "thing"}
+look_for_type = {"Σ":"person", "e":"thing", "∫": "thing", "∂/∂x": "person"}
 file_name = {"Σ":"SIGMA", "e":"EULERS", "∫": "INTEGRAL", "∂/∂x": "DIFFERENTIATION"}
 
 
